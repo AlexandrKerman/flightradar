@@ -104,7 +104,8 @@ class AeroplanesAPI(bc.BaseAPI):
                         "spi": i[15],
                         "position_source": i[16],
                     }
-                    for i in aeroplanes if i
+                    for i in aeroplanes
+                    if i
                 ]
             else:
                 print("Not states key")
@@ -225,7 +226,7 @@ class Aeroplane(bc.BaseAeroplane):
         aeroplanes_ = []
         for i in aeroplanes:
             if i in aeroplanes_:
-                print(f'Not unique: {i.get('Callsign')} ({i.get('ICAO24')})')
+                print(f"Not unique: {i.get('Callsign')} ({i.get('ICAO24')})")
                 continue
             aeroplanes_.append(i)
         return [cls(**i) for i in aeroplanes_]
@@ -241,20 +242,21 @@ class Aeroplane(bc.BaseAeroplane):
         return self.country in countries
 
     @staticmethod
-    def get_top(data: list['Aeroplane'] | tuple['Aeroplane'], top_n: int = 5) -> list:
-        return [i for i in sorted(filter (lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude)][:5]
+    def get_top(data: list["Aeroplane"] | tuple["Aeroplane"], top_n: int = 5) -> list:
+        return [i for i in sorted(filter(lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude)][:5]
 
     @staticmethod
-    def filter_by_range(data: list['Aeroplane'] | tuple['Aeroplane'], range_: tuple[int, int]) -> list:
+    def filter_by_range(data: list["Aeroplane"] | tuple["Aeroplane"], range_: tuple[int, int]) -> list:
         return [i for i in data if i.baro_altitude and range_[0] <= i.baro_altitude <= range_[1]]
 
     @staticmethod
-    def filter_by_ground (data: list['Aeroplane'] | tuple['Aeroplane'], is_grounded: bool) -> list:
+    def filter_by_ground(data: list["Aeroplane"] | tuple["Aeroplane"], is_grounded: bool) -> list:
         return [i for i in data if i.on_ground == is_grounded]
 
     @staticmethod
-    def get_slice(data: list['Aeroplane'] | tuple['Aeroplane'], head: int = 3, tail: int = 2):
+    def get_slice(data: list["Aeroplane"] | tuple["Aeroplane"], head: int = 3, tail: int = 2):
         return data[:head].extend(data[tail:])
+
 
 class JSONSaver(bc.BaseFile):
     __slots__ = ("path", "data")
@@ -271,11 +273,10 @@ class JSONSaver(bc.BaseFile):
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.touch()
             if self.data:
-                with open(self.path, 'w') as file:
-                    json.dump('[]', file)
+                with open(self.path, "w") as file:
+                    json.dump("[]", file)
             else:
                 self.save_file()
-
 
     def update_data(self, data: list) -> None:
         if isinstance(data, list):
@@ -304,6 +305,7 @@ class JSONSaver(bc.BaseFile):
 
     def get_fullpath(self):
         return Path.resolve(self.path)
+
 
 async def main() -> None:
     # api = AeroplanesAPI()
