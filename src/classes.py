@@ -9,7 +9,7 @@ from typing import Any, Generator, Optional
 import aiohttp
 from dotenv import load_dotenv
 
-import base_classes as bc
+from src import base_classes as bc
 
 load_dotenv()
 OPENSKY_API = getenv("OPENSKY_API")
@@ -43,7 +43,7 @@ class AeroplanesAPI(bc.BaseAPI):
             @wraps(func)
             async def inner(*args, **kwargs) -> aiohttp.ClientResponse | None:
                 for i in range(limit):
-                    print("Попытка подключения")
+                    print(f"Попытка подключения к {args[0]}...")
                     res = await func(*args, **kwargs)
                     if res.status == 200:
                         print("Ok")
@@ -104,8 +104,7 @@ class AeroplanesAPI(bc.BaseAPI):
                         "spi": i[15],
                         "position_source": i[16],
                     }
-                    for i in aeroplanes
-                    if i and (i[2].strip().lower() == country.strip().lower() if country else True)
+                    for i in aeroplanes if i
                 ]
             else:
                 print("Not states key")
@@ -156,7 +155,7 @@ class Aeroplane(bc.BaseAeroplane):
     def __comparison_tuple(self):
         if all((self.baro_altitude, self.velocity)):
             return self.baro_altitude, self.velocity
-        return (self.baro_altitude if self.baro_altitude else 0, self.velocity if self.velocity else 0)
+        return self.baro_altitude if self.baro_altitude else 0, self.velocity if self.velocity else 0
 
     def __lt__(self, other) -> bool:
         if isinstance(other, Aeroplane):
@@ -199,8 +198,10 @@ class Aeroplane(bc.BaseAeroplane):
         return f"Aeroplane({', '.join([f'{i}={self.__getattribute__(i)}' for i in self.__slots__])})"
 
     def __str__(self) -> str:
-        return (f"{self.Callsign} ({self.ICAO24}) in {self.country} have velocity {self.velocity} "
-                f"and flies in {self.baro_altitude if self.baro_altitude else 0} above the sea level.")
+        return (
+            f"{self.Callsign} ({self.ICAO24}) in {self.country} have velocity {self.velocity} "
+            f"and flies in {self.baro_altitude if self.baro_altitude else 0} above the sea level."
+        )
 
     def __bool__(self) -> bool:
         return all((self.baro_altitude, self.velocity))
@@ -209,7 +210,7 @@ class Aeroplane(bc.BaseAeroplane):
         if isinstance(item, str):
             if item in self.__slots__:
                 return self.__getattribute__(item)
-            raise KeyError(f"{type(self)} dont have the '{item}' attribute")
+            return None
         elif isinstance(item, int):
             return self.__getattribute__(self.__slots__[item])
         raise TypeError(f"Expected int or str. Got {type(item)}: {item}")
@@ -221,26 +222,64 @@ class Aeroplane(bc.BaseAeroplane):
 
     @classmethod
     def cast_to_aeroplane(cls, aeroplanes) -> list:
-        return [cls(**i) for i in aeroplanes]
+        aeroplanes_ = []
+        for i in aeroplanes:
+            if i in aeroplanes_:
+                print(f'Not unique: {i.get('Callsign')} ({i.get('ICAO24')})')
+                continue
+            aeroplanes_.append(i)
+        return [cls(**i) for i in aeroplanes_]
 
     def get_in_dict(self):
         return {k: self.__getattribute__(k) for k in self.__slots__}
 
+    @staticmethod
+    def filter_by_country(countries: list[str], planes: list | tuple) -> list:
+        return [i for i in planes if i.country in countries]
+
+    def filter_predicate(self, countries: list):
+        return self.country in countries
+
+    @staticmethod
+    def get_top(data: list['Aeroplane'] | tuple['Aeroplane'], top_n: int = 5) -> list:
+        return [i for i in sorted(filter (lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude)][:5]
+
+    @staticmethod
+    def filter_by_range(data: list['Aeroplane'] | tuple['Aeroplane'], range_: tuple[int, int]) -> list:
+        return [i for i in data if i.baro_altitude and range_[0] <= i.baro_altitude <= range_[1]]
+
+    @staticmethod
+    def filter_by_ground (data: list['Aeroplane'] | tuple['Aeroplane'], is_grounded: bool) -> list:
+        return [i for i in data if i.on_ground == is_grounded]
+
+    @staticmethod
+    def get_slice(data: list['Aeroplane'] | tuple['Aeroplane'], head: int = 3, tail: int = 2):
+        return data[:head].extend(data[tail:])
 
 class JSONSaver(bc.BaseFile):
     __slots__ = ("path", "data")
 
-    def __init__(self, file_path, file_name: str):
+    def __init__(self, file_path: str, file_name: str):
         self.path = Path(file_path) / file_name
         if self.path.suffix != ".json":
             self.path = self.path.with_suffix(".json")
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.touch()
         self.data = []
+        self.__create_path()
+
+    def __create_path(self):
+        if not self.path.exists():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.touch()
+            if self.data:
+                with open(self.path, 'w') as file:
+                    json.dump('[]', file)
+            else:
+                self.save_file()
+
 
     def update_data(self, data: list) -> None:
-        if data and isinstance(data, list):
-            self.data = data
+        if isinstance(data, list):
+            self.data = [i.get_in_dict() for i in data]
         else:
             raise TypeError(f"expected list. Got {type(data)}")
 
@@ -254,13 +293,17 @@ class JSONSaver(bc.BaseFile):
                 break
 
     def read_aeroplane(self) -> None:
+        self.__create_path()
         with open(self.path, "r", encoding="utf-8") as file:
             self.data = json.load(file)
 
     def save_file(self) -> None:
+        self.__create_path()
         with open(self.path, "w", encoding="utf-8") as file:
             json.dump(self.data, file, indent=2, ensure_ascii=False)
 
+    def get_fullpath(self):
+        return Path.resolve(self.path)
 
 async def main() -> None:
     # api = AeroplanesAPI()
