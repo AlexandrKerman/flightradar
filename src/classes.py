@@ -11,20 +11,23 @@ from dotenv import load_dotenv
 
 from src import base_classes as bc
 
+from random import randint
+
+
 load_dotenv()
 OPENSKY_API = getenv("OPENSKY_API")
 OPENSKY_CLIENT = getenv("OPENSKY_CLIENT")
 
 
 class AeroplanesAPI(bc.BaseAPI):
-    __slots__ = ("__aeroplanes", "__box", "__token")
+    __slots__ = ("__aeroplanes", "__box")
     __openstreet_url = "https://nominatim.openstreetmap.org"
     __opensky_url = "https://opensky-network.org/api"
-
+    __token = None
     def __init__(self):
         self.__aeroplanes = []
         self.__box = {}
-        self.__token = None
+        # self.__token = None
 
     async def __get_token(self) -> None:
         async with aiohttp.ClientSession() as session:
@@ -76,7 +79,7 @@ class AeroplanesAPI(bc.BaseAPI):
         if box:
             self.__box = {"lamin": box[0], "lamax": box[1], "lomin": box[2], "lomax": box[3]}
 
-    async def get_aeroplanes(self, country: str | None = None) -> None:
+    async def get_aeroplanes(self) -> None:
         url = f"{self.__opensky_url}/states/all"
         if not self.__token:
             await self.__get_token()
@@ -243,7 +246,7 @@ class Aeroplane(bc.BaseAeroplane):
 
     @staticmethod
     def get_top(data: list["Aeroplane"] | tuple["Aeroplane"], top_n: int = 5) -> list:
-        return [i for i in sorted(filter(lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude)][:5]
+        return [i for i in sorted(filter(lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude, reverse=True)][:top_n]
 
     @staticmethod
     def filter_by_range(data: list["Aeroplane"] | tuple["Aeroplane"], range_: tuple[int, int]) -> list:

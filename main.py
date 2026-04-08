@@ -8,16 +8,6 @@ def scroll_cmd():
     print("\n" * 100)
 
 
-def answer_checker(question=None, valid_answers=None):
-    while True:
-        valid_answers = [*map(str, valid_answers)]
-        user_input = input(question if question else "").strip().lower()
-        if user_input in valid_answers:
-            return user_input
-        print(f"Некорректный ответ. Доступные варианты: {valid_answers}")
-        return False
-
-
 def filter_by_countries(planes: list) -> list:
     print('Введите список стран), разделяя их символом ";".\n' "Страны вводятся по-английски, соблюдая регистр")
     user_input = input("input: ").split(";")
@@ -70,6 +60,12 @@ def wait_for_actions():
     input("Enter to retun in main menu...")
 
 
+async def fetch_aeroplanes_data(obj, country):
+    await obj.set_box(country)
+    await obj.get_aeroplanes()
+    return obj
+
+
 async def get_aeroplanes(aeroplanes):
     if aeroplanes:
         print("Ваш список самолётов не пустой.\n" "Вы действительно хотите продолжить? Да/Нет")
@@ -78,10 +74,10 @@ async def get_aeroplanes(aeroplanes):
                 pass
             case "нет":
                 print("Данные не изменены. Возвращаю в главное меню")
-                return aeroplanes
+                return False
             case _:
                 print("Некорректный ввод.")
-                return aeroplanes
+                return False
 
     user_input = input(
         "Введите страны, самолёты над которыми хотите получить.\n"
@@ -95,8 +91,9 @@ async def get_aeroplanes(aeroplanes):
     api_objects = [AeroplanesAPI() for i in range(len(countries))]
 
     try:
-        await asyncio.gather(*[obj.set_box(country) for obj, country in zip(api_objects, countries)])
-        await asyncio.gather(*[obj.get_aeroplanes(country) for obj, country in zip(api_objects, countries)])
+        api_objects = await asyncio.gather(*[fetch_aeroplanes_data(obj, country) for obj, country in zip(api_objects, countries)])
+        # await asyncio.gather(*[obj.set_box(country) for obj, country in zip(api_objects, countries)])
+        # await asyncio.gather(*[obj.get_aeroplanes() for obj in api_objects])
     except IndexError:
         scroll_cmd()
         print("Произошла ошибка. Возможно, введённые данные некорректны. Попробуйте снова\n")
@@ -108,7 +105,7 @@ async def get_aeroplanes(aeroplanes):
 
 
 def sort_aeroplanes(planes):
-    return sorted(planes, key=lambda x: alt if (alt := x["baro_altitude"]) else 0)
+    return sorted(planes, reverse=True, key=lambda x: alt if (alt := x["baro_altitude"]) else 0)
 
 
 def create_file_manager(filetype):
@@ -258,7 +255,9 @@ def work_with_file(aeroplanes, filetype):
 def set_filetype():
     scroll_cmd()
     file_types = {"1": JSONSaver}
-    print("Укажите тип файла, с которым хотите работать:\n" "1. JSON\n" "0. Вернуться в меню")
+    print("Укажите тип файла, с которым хотите работать:\n"
+          "1. JSON\n"
+          "0. Вернуться в меню")
     if (user_input := input("input: ").strip()) == "0":
         print("false")
         return False
@@ -272,7 +271,6 @@ def set_filetype():
 
 async def main():
     aeroplanes = []
-    # aeroplanes = await get_aeroplanes(aeroplanes)
 
     while True:
         scroll_cmd()
@@ -293,9 +291,12 @@ async def main():
         match input("input: "):
             case "1":
                 scroll_cmd()
-                aeroplanes = await get_aeroplanes(aeroplanes)
-                scroll_cmd()
-                print("Самолёты получены. Возвращаю в главное меню")
+                if (temp := await get_aeroplanes(aeroplanes)) != False:  # Явное сравнение с False. Aeroplanes может быть []
+                    aeroplanes = temp
+                    scroll_cmd()
+                    print("Самолёты получены. Возвращаю в главное меню")
+                else:
+                    print('Изменений не произошло.')
                 wait_for_actions()
             case "2":
                 if aeroplanes:
