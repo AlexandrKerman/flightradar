@@ -11,9 +11,6 @@ from dotenv import load_dotenv
 
 from src import base_classes as bc
 
-from random import randint
-
-
 load_dotenv()
 OPENSKY_API = getenv("OPENSKY_API")
 OPENSKY_CLIENT = getenv("OPENSKY_CLIENT")
@@ -24,6 +21,7 @@ class AeroplanesAPI(bc.BaseAPI):
     __openstreet_url = "https://nominatim.openstreetmap.org"
     __opensky_url = "https://opensky-network.org/api"
     __token = None
+
     def __init__(self):
         self.__aeroplanes = []
         self.__box = {}
@@ -210,13 +208,16 @@ class Aeroplane(bc.BaseAeroplane):
     def __bool__(self) -> bool:
         return all((self.baro_altitude, self.velocity))
 
-    def __getitem__(self, item):
-        if isinstance(item, str):
-            if item in self.__slots__:
-                return self.__getattribute__(item)
-            return None
-        elif isinstance(item, int):
-            return self.__getattribute__(self.__slots__[item])
+    def __getitem__(self, item: str | int | slice) -> Any:
+        match item:
+            case str():
+                if item in self.__slots__:
+                    return self.__getattribute__(item)
+                return None
+            case int():
+                return self.__getattribute__(self.__slots__[item])
+            case slice():
+                return [self.__getattribute__(attr) for attr in self.__slots__[item]]
         raise TypeError(f"Expected int or str. Got {type(item)}: {item}")
 
     @classmethod
@@ -246,7 +247,8 @@ class Aeroplane(bc.BaseAeroplane):
 
     @staticmethod
     def get_top(data: list["Aeroplane"] | tuple["Aeroplane"], top_n: int = 5) -> list:
-        return [i for i in sorted(filter(lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude, reverse=True)][:top_n]
+        return [i for i in
+                sorted(filter(lambda x: x.baro_altitude, data), key=lambda x: x.baro_altitude, reverse=True)][:top_n]
 
     @staticmethod
     def filter_by_range(data: list["Aeroplane"] | tuple["Aeroplane"], range_: tuple[int, int]) -> list:
@@ -262,24 +264,41 @@ class Aeroplane(bc.BaseAeroplane):
 
 
 class JSONSaver(bc.BaseFile):
-    __slots__ = ("path", "data")
+    __slots__ = ("__path", "data")
 
-    def __init__(self, file_path: str, file_name: str):
-        self.path = Path(file_path) / file_name
-        if self.path.suffix != ".json":
-            self.path = self.path.with_suffix(".json")
+    def __init__(self, file_path: str, file_name: str = 'saved_aeroplanes'):
+        self.__path = Path(file_path) / file_name
+        if self.__path.suffix != ".json":
+            self.__path = self.__path.with_suffix(".json")
         self.data = []
         self.__create_path()
 
-    def __create_path(self):
-        if not self.path.exists():
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.touch()
+    def __getitem__(self, item: str) -> list:
+        if isinstance(item, str):
+            return [v for plane_data in self.data for k, v in plane_data.items() if k == item]
+        else:
+            raise TypeError(f'Expected str. Got {type(item)}')
+
+    @property
+    def path(self):
+        return self.__path
+
+
+    def __create_path(self) -> None:
+        if not self.__path.exists():
+            self.__path.parent.mkdir(parents=True, exist_ok=True)
+            self.__path.touch()
             if self.data:
-                with open(self.path, "w") as file:
+                with open(self.__path, "w") as file:
                     json.dump("[]", file)
             else:
                 self.save_file()
+
+    def __is_unique(self, aeroplane: dict) -> bool:
+        if aeroplane.get('ICAO24') in self['ICAO24']:
+            return False
+        else:
+            return True
 
     def update_data(self, data: list) -> None:
         if isinstance(data, list):
@@ -288,7 +307,12 @@ class JSONSaver(bc.BaseFile):
             raise TypeError(f"expected list. Got {type(data)}")
 
     def add_aeroplane(self, aeroplane) -> None:
-        self.data.append(aeroplane.get_in_dict())
+        aeroplane_dict = aeroplane.get_in_dict()
+        if self.__is_unique(aeroplane_dict):
+            self.data.append(aeroplane_dict)
+        else:
+            if aeroplane_id := aeroplane_dict.get('ICAO24'):
+                self.data[self['ICAO24'].index(aeroplane_id)] = aeroplane_dict
 
     def delete_aeroplane(self, board_id) -> None:
         for i in self.data:
@@ -298,40 +322,39 @@ class JSONSaver(bc.BaseFile):
 
     def read_aeroplane(self) -> None:
         self.__create_path()
-        with open(self.path, "r", encoding="utf-8") as file:
+        with open(self.__path, "r", encoding="utf-8") as file:
             self.data = json.load(file)
 
     def save_file(self) -> None:
         self.__create_path()
-        with open(self.path, "w", encoding="utf-8") as file:
+        with open(self.__path, "w", encoding="utf-8") as file:
             json.dump(self.data, file, indent=2, ensure_ascii=False)
 
     def get_fullpath(self):
-        return Path.resolve(self.path)
+        return Path.resolve(self.__path)
 
 
 async def main() -> None:
-    # api = AeroplanesAPI()
-    # await api.set_box('China')
-    # await api.get_aeroplanes('China')
-    # aeroplanes = api.aeroplanes
-    # aeroplanes = Aeroplane.cast_to_aeroplane(aeroplanes[:3])
-    # # print(*aeroplanes, sep='\n\n')
+    api = AeroplanesAPI()
+    await api.set_box('China')
+    await api.get_aeroplanes()
+    aeroplanes = api.aeroplanes
+    aeroplanes = Aeroplane.cast_to_aeroplane(aeroplanes[:10])
     saver = JSONSaver("../data", "test")
+    print(*aeroplanes, sep='\n\n')
+    saver.update_data(aeroplanes)
+    # print(aeroplanes[0][:])
     # for i in aeroplanes:
     #     saver.add_aeroplane(i)
     # print(*saver.data, sep='\n\n')
     # saver.delete_aeroplane('781c77')
-    # print()
-    # print()
-    # print()
     # print(*saver.data, sep='\n\n')
     # saver.save_file()
 
-    saver.read_aeroplane()
-    print(json.dumps(saver.data, indent=2))
-    planes = Aeroplane.cast_to_aeroplane(saver.data)
-    print(planes)
+    # saver.read_aeroplane()
+    # print(json.dumps(saver.data, indent=2))
+    # planes = Aeroplane.cast_to_aeroplane(saver.data)
+    # print(planes)
 
 
 if __name__ == "__main__":
