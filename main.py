@@ -8,9 +8,11 @@ def scroll_cmd():
     print("\n" * 100)
 
 
-def filter_by_countries(planes: list) -> list:
+def filter_by_countries(planes: list) -> list | bool:
     print('Введите список стран), разделяя их символом ";".\n' "Страны вводятся по-английски, соблюдая регистр")
     user_input = input("input: ").split(";")
+    if not user_input:
+        return False
     countries = [*map(lambda x: x.strip(), user_input)]
     return Aeroplane.filter_by_country(countries, planes)
 
@@ -418,13 +420,16 @@ async def main():
                 wait_for_actions()
             case "3":
                 print("Фильтрую...")
-                aeroplanes = filter_by_countries(aeroplanes)
-                print("Данные отфильтрованы.")
+                if aeroplanes_ := filter_by_countries(aeroplanes):
+                    aeroplanes = aeroplanes_
+                    print("Данные отфильтрованы.")
+                else:
+                    print('Данные остались без изменений')
                 wait_for_actions()
             case "4":
                 print("Фильтрую...")
-                aeroplanes = filter_by_range(aeroplanes)
-                if aeroplanes:
+                if aeroplanes_ := filter_by_range(aeroplanes):
+                    aeroplanes = aeroplanes_
                     print("Данные отфильтрованы.")
                 else:
                     print("Данные остались без изменений. Повторите попытку")
