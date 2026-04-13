@@ -94,7 +94,8 @@ async def get_aeroplanes(aeroplanes):
 
     try:
         api_objects = await asyncio.gather(
-            *[fetch_aeroplanes_data(obj, country) for obj, country in zip(api_objects, countries)])
+            *[fetch_aeroplanes_data(obj, country) for obj, country in zip(api_objects, countries)]
+        )
         # await asyncio.gather(*[obj.set_box(country) for obj, country in zip(api_objects, countries)])
         # await asyncio.gather(*[obj.get_aeroplanes() for obj in api_objects])
     except IndexError:
@@ -190,10 +191,7 @@ def confirm_delete_aeroplanes(filemanager):
 def delete_aeroplane_menu(filemanager):
     while True:
         scroll_cmd()
-        print("Меню удаления самолётов.\n"
-              "1. Вывести все самолёты\n"
-              "2. Удалить самолёты\n"
-              "0. Вернуться назад")
+        print("Меню удаления самолётов.\n" "1. Вывести все самолёты\n" "2. Удалить самолёты\n" "0. Вернуться назад")
         match input("input: "):
             case "1":
                 if aeroplanes := filemanager.data:
@@ -208,10 +206,10 @@ def delete_aeroplane_menu(filemanager):
 
 
 def add_aeroplanes(filemanager, aeroplanes):
-    print('Добавляю самолёты в файловый менеджер...')
+    print("Добавляю самолёты в файловый менеджер...")
     for i in aeroplanes:
         filemanager.add_aeroplane(i)
-    print('Самолёты добавлены')
+    print("Самолёты добавлены")
 
 
 def work_with_file(aeroplanes, filetype):
@@ -262,7 +260,7 @@ def work_with_file(aeroplanes, filetype):
                 else:
                     print("Список остался неизменным")
                 wait_for_actions()
-            case '7':
+            case "7":
                 scroll_cmd()
                 add_aeroplanes(filemanager, aeroplanes)
                 wait_for_actions()
@@ -273,9 +271,7 @@ def work_with_file(aeroplanes, filetype):
 def set_filetype():
     scroll_cmd()
     file_types = {"1": JSONSaver}
-    print("Укажите тип файла, с которым хотите работать:\n"
-          "1. JSON\n"
-          "0. Вернуться в меню")
+    print("Укажите тип файла, с которым хотите работать:\n" "1. JSON\n" "0. Вернуться в меню")
     if (user_input := input("input: ").strip()) == "0":
         print("false")
         return False
@@ -289,7 +285,7 @@ def set_filetype():
 
 def get_tutor():
     tutor = [
-        '''
+        """
         Краткая инструкция. РЕКОМЕНДУЕТСЯ к прочтению при первом запуске
         Чтобы пропустить её при след. запуске, примените параметр --skip-tutor
         
@@ -304,14 +300,14 @@ def get_tutor():
         что, очевидно, может привести к дублированию некоторых данных.
         В таком случае дублирующие записи будут исключены из набора данных, оставляя лишь уникальные значения.
         Все удалённые элементы будут выводиться в процессе объединения наборов данных.
-        ''',
-        '''
+        """,
+        """
         2. В меню доступны различные варианты обработки данных.
         Каждый вариант обработки данных изменяет набор (искл.: Топ по высоте).
         После каждого изменения рекомендуется выводить список, чтобы оценить изменения - п.2 гл. меню.
         Если список самолётов оказывается пустым, будет выведено соответствующее сообщение.
-        ''',
-        '''
+        """,
+        """
         3. П.8 главного меню подразумевает работу с файлом.
         При выборе соответствующего раздела будет предложено выбрать тип файла.
         После подтверждения типа файла, необходимо ввести:
@@ -324,8 +320,8 @@ def get_tutor():
         в зависимости от расширения файла, выбранного ранее.
         
         Полный путь и имя файла будут приведены в меню по ходу работы с файловым менеджером.
-        ''',
-        '''
+        """,
+        """
         4. Набор данных при работе с файлами и изначальный список самолётов – НЕЗАВИСИМЫЕ наборы данных.
         Изначально набор данных при работе с файлами отсутствует.
         Его можно заполнить тремя способами:
@@ -337,25 +333,25 @@ def get_tutor():
         полученного в гл. меню.
         При дублировании данные уникализируются - дублирующиеся экземпляры не добавляются
         (сравнение по уникальному ICAO24 самолёта).
-        ''',
-        '''
+        """,
+        """
         5. Для вывода содержимого файлового менеджера
         (набора данных, занесённого в него. Данные, полученные в гл. меню не задействованы)
         используйте п.2 меню работы с файлами - Вывести информацию.
-        ''',
-        '''
+        """,
+        """
         6. Для сохранения результатов используйте п.3 меню работы с файлами - Сохранить информацию.
         Данные будут сохранены в соответствующей директории.
         !!! Данные будут перезаписаны !!!
-        Если хотели ДОБАВИТЬ в файл новые данные, а не заменять их полностью, воспользуйтесь п.1 и п.7 меню работы с файлами,
-        после чего переходите к сохранению данных.
-        ''',
-        '''
+        Если хотели ДОБАВИТЬ в файл новые данные, а не заменять их полностью,
+        воспользуйтесь п.1 и п.7 меню работы с файлами, после чего переходите к сохранению данных.
+        """,
+        """
         7. П5. меню работы с файлами подразумевает замену набора данных в гл. меню на набор,
         полученный в ходе работы с файловым менеджером.
         Если там уже имеются данные, будет выведено соответствующее предупреждение.
-        ''',
-        '''
+        """,
+        """
         8. Удаление данных. п.6 меню работы с файлами.
         Раздел удаления данных из файлового менеджера.
         Будет предложено 3 варианта:
@@ -363,25 +359,25 @@ def get_tutor():
         - Удалить самолёты
         - Вернуться назад
         * Список самолётов выводится пронумерованно в виде словарного представления каждого самолёта.
-        Удаление происходит путём ввода уник. идентификатора самолёта (ICAO24). Если их несколько - разделить символом ";".
-        '''
+        Удаление происходит путём ввода уник. идентификатора самолёта (ICAO24).
+        Если их несколько - разделить символом ";".
+        """,
     ]
 
     for i, v in enumerate(tutor):
         scroll_cmd()
-        print(f'Страница {i + 1} из {len(tutor)}')
+        print(f"Страница {i + 1} из {len(tutor)}")
         print(v)
-        print('Enter to next tutorial page.\n'
-              '"skip" to skip all tutorial')
-        match input('input: ').strip():
-            case '':
+        print("Enter to next tutorial page.\n" '"skip" to skip all tutorial')
+        match input("input: ").strip():
+            case "":
                 continue
-            case 'skip':
+            case "skip":
                 break
 
 
 async def main():
-    if '--skip-tutor' not in sys.argv:
+    if "--skip-tutor" not in sys.argv:
         get_tutor()
 
     aeroplanes = []
@@ -405,12 +401,12 @@ async def main():
         match input("input: "):
             case "1":
                 scroll_cmd()
-                if (temp := await get_aeroplanes(aeroplanes)) != False:
+                if (temp := await get_aeroplanes(aeroplanes)) is not False:
                     aeroplanes = temp
                     scroll_cmd()
                     print("Самолёты получены. Возвращаю в главное меню")
                 else:
-                    print('Изменений не произошло.')
+                    print("Изменений не произошло.")
                 wait_for_actions()
             case "2":
                 if aeroplanes:
@@ -424,7 +420,7 @@ async def main():
                     aeroplanes = aeroplanes_
                     print("Данные отфильтрованы.")
                 else:
-                    print('Данные остались без изменений')
+                    print("Данные остались без изменений")
                 wait_for_actions()
             case "4":
                 print("Фильтрую...")
@@ -436,8 +432,8 @@ async def main():
                 wait_for_actions()
             case "5":
                 print("Фильтрую...")
-                aeroplanes = filter_by_ground(aeroplanes)
-                if aeroplanes:
+                if aeroplanes_ := filter_by_ground(aeroplanes):
+                    aeroplanes = aeroplanes_
                     print("Данные отфильтрованы.")
                 else:
                     print("Данные остались без изменений. Повторите попытку")
