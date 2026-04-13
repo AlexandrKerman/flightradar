@@ -436,8 +436,8 @@ async def main():
                 wait_for_actions()
             case "5":
                 print("Фильтрую...")
-                aeroplanes = filter_by_ground(aeroplanes)
-                if aeroplanes:
+                if aeroplanes_ := filter_by_ground(aeroplanes):
+                    aeroplanes = aeroplanes_
                     print("Данные отфильтрованы.")
                 else:
                     print("Данные остались без изменений. Повторите попытку")
