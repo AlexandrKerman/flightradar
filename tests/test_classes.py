@@ -103,9 +103,23 @@ async def test_get_aeroplanes_with_token():
     mock_data = {
         "states": [
             [
-                "7809ab", "CQH6760", "China", 1775729998, 1775729998,
-                123.9414, 39.2658, 10698.48, False, 212.99,
-                184.02, 0.33, None, 10881.36, None, False, 0
+                "7809ab",
+                "CQH6760",
+                "China",
+                1775729998,
+                1775729998,
+                123.9414,
+                39.2658,
+                10698.48,
+                False,
+                212.99,
+                184.02,
+                0.33,
+                None,
+                10881.36,
+                None,
+                False,
+                0,
             ]
         ]
     }
@@ -115,7 +129,7 @@ async def test_get_aeroplanes_with_token():
         mock_get.assert_called_once_with(
             f"{api._AeroplanesAPI__opensky_url}/states/all",
             params=api._AeroplanesAPI__box,
-            headers={"Authorization": "Bearer existing_token"}
+            headers={"Authorization": "Bearer existing_token"},
         )
         assert len(api._AeroplanesAPI__aeroplanes) == 1
         assert api._AeroplanesAPI__aeroplanes[0]["ICAO24"] == "7809ab"
@@ -125,8 +139,10 @@ async def test_get_aeroplanes_with_token():
 async def test_get_aeroplanes_no_token():
     api = AeroplanesAPI()
     api._AeroplanesAPI__box = {}
-    with patch.object(api, "_AeroplanesAPI__get_token") as mock_token, \
-            patch.object(api, "_AeroplanesAPI__get_request", return_value={"states": []}) as mock_get:
+    with (
+        patch.object(api, "_AeroplanesAPI__get_token") as mock_token,
+        patch.object(api, "_AeroplanesAPI__get_request", return_value={"states": []}) as mock_get,
+    ):
         await api.get_aeroplanes()
         mock_token.assert_called_once()
         mock_get.assert_called_once()

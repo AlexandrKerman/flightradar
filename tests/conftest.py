@@ -1,7 +1,9 @@
-import pytest
-from src.classes import AeroplanesAPI, Aeroplane, JSONSaver
 import json
 from unittest.mock import AsyncMock
+
+import pytest
+
+from src.classes import Aeroplane
 
 
 @pytest.fixture()
@@ -185,7 +187,6 @@ def sample_plane_dict():
         "spi": False,
         "position_source": 0,
     }
-
 
 
 @pytest.fixture
